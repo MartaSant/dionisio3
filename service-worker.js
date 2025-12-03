@@ -11,6 +11,7 @@ const PRECACHE_FILES = [
     '/servizi.html',
     '/prodotti.html',
     '/contatti.html',
+    '/social.html',
     '/logo.png',
     '/logomini.png',
     '/logo.ico'
