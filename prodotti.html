@@ -58,6 +58,11 @@
 </head>
 <body class="menu-body">
     <div class="menu-page">
+        <header class="page-header">
+            <img src="logomini.png" alt="Dionosio's" class="page-header-logo">
+            <h1 class="page-header-title" id="pageTitle">Prodotti</h1>
+        </header>
+        
         <a href="home.html" class="menu-close">
             <span>&larr;</span>
             <span>Home</span>
@@ -194,6 +199,18 @@
                 top: 0,
                 behavior: 'smooth'
             });
+        });
+        
+        // Fade out title on scroll
+        const pageTitle = document.getElementById('pageTitle');
+        window.addEventListener('scroll', function() {
+            const scrollY = window.pageYOffset;
+            if (scrollY > 50) {
+                pageTitle.style.opacity = '0';
+                pageTitle.style.transition = 'opacity 0.3s ease';
+            } else {
+                pageTitle.style.opacity = '1';
+            }
         });
         
         // Service Worker registration

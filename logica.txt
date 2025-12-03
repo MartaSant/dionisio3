@@ -1,0 +1,633 @@
+================================================================================
+                    DOCUMENTAZIONE COMPLETA PROGETTO HUGÒ
+                    Logica, Regole e Pattern per Replicare il Progetto
+================================================================================
+
+INDICE
+------
+1. STRUTTURA DEL PROGETTO
+2. BRANDING E NAMING CONVENTIONS
+3. SERVICE WORKER E GESTIONE CACHE
+4. STRUTTURA HTML STANDARD
+5. META TAG E SEO
+6. PWA (PROGRESSIVE WEB APP)
+7. GESTIONE IMMAGINI (CASE-SENSITIVE)
+8. CSS E DESIGN SYSTEM
+9. PATTERN DI NAVIGAZIONE
+10. GESTIONE AGGIORNAMENTI
+11. DEPLOYMENT SU GITHUB PAGES
+12. TROUBLESHOOTING
+13. BEST PRACTICES
+
+================================================================================
+1. STRUTTURA DEL PROGETTO
+================================================================================
+
+STRUTTURA FILE:
+--------------
+/
+├── index.html              # Shell desktop (iframe wrapper)
+├── home.html               # Homepage principale
+├── style.css              # CSS globale
+├── service-worker.js       # Service Worker per PWA e cache
+├── manifest.json          # Manifest PWA
+├── sitemap.xml            # Sitemap per SEO
+├── robots.txt             # Robots.txt per SEO
+├── logo.png               # Logo principale (512x512)
+├── logomini.png           # Logo piccolo (192x192)
+├── logo.ico               # Favicon
+├── [nome-pagina].html     # Pagine del sito
+├── [nome-immagine].png     # Immagini (ATTENZIONE: case-sensitive)
+└── network/               # Cartella per immagini network
+    ├── hugo.png
+    ├── decanter.png
+    └── flego.png
+
+TIPI DI PAGINE:
+---------------
+1. Homepage (home.html) - Pagina principale con cards di navigazione
+2. Menu Pages - Pagine con menu (food, cocktails, winebeer, etc.)
+3. Detail Pages - Pagine di dettaglio (paloma, negroni, gin, etc.)
+4. Info Pages - Pagine informative (allergeni, policy, autore, social, network)
+5. Shell Page (index.html) - Wrapper desktop con iframe
+
+================================================================================
+2. BRANDING E NAMING CONVENTIONS
+================================================================================
+
+BRAND PRINCIPALE:
+-----------------
+- Nome: "HUGÒ" (con Ò maiuscola accentata)
+- Tagline: "Find your happiness"
+- Colore principale: #FFC928 (giallo)
+- Colore sfondo: #000000 (nero) / #111111 (nero profondo)
+- Font: Montserrat (400, 600, 700)
+
+REGOLE DI BRANDING:
+-------------------
+1. SEMPRE usare "HUGÒ" (maiuscolo) per il nome del locale
+2. SEMPRE usare "Find your happiness" come tagline
+3. NEL FOOTER: "Studio IDE" come autore/designer
+4. NEL FOOTER: "Hugò di Vincenzo Di Palo P.IVA IT09578771215"
+5. NEL FOOTER: Link a policy.html e autore.html
+6. NEL NETWORK: "Il Network di Studio IDE" (non "Il Network HUGÒ")
+
+SOSTITUZIONI DA FARE:
+---------------------
+- "Flègo" / "FLÈGO" / "fleco" → "HUGÒ"
+- "Sorsi & Morsi" → "Find your happiness"
+- "me stesso" → "Studio IDE"
+- Qualsiasi riferimento al vecchio brand → nuovo brand
+
+URL BASE:
+---------
+- Produzione: https://martasant.github.io/hugohub/
+- Sostituire in tutti i meta tag, canonical, og:url, twitter:url
+
+================================================================================
+3. SERVICE WORKER E GESTIONE CACHE
+================================================================================
+
+STRATEGIA CACHE:
+----------------
+- Network First per tutti i file
+- HTML: cache: 'no-store' (forza sempre controllo rete)
+- Immagini/Asset: cache normale (possono essere cachati)
+
+VERSIONE CACHE:
+---------------
+- Formato: 'hugohub-v[N]' (es. 'hugohub-v4')
+- INCREMENTARE la versione quando si aggiorna il sito
+- Questo forza l'aggiornamento automatico della cache
+
+STRUTTURA SERVICE WORKER:
+-------------------------
+1. PRECACHE_FILES: Array di file da precachare all'installazione
+2. Install Event: Precaching + skipWaiting()
+3. Activate Event: Pulizia cache vecchie + clients.claim()
+4. Fetch Event: Strategia diversificata (HTML vs Asset)
+
+REGISTRAZIONE SERVICE WORKER (in ogni pagina HTML):
+----------------------------------------------------
+```javascript
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' })
+            .then(function(registration) {
+                console.log('Service Worker registrato con successo:', registration.scope);
+                
+                // Controlla aggiornamenti ogni volta che la pagina viene caricata
+                registration.update();
+                
+                // Ascolta messaggi dal service worker
+                navigator.serviceWorker.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'SW_UPDATED') {
+                        console.log('Nuovo Service Worker disponibile, ricarico la pagina...');
+                        window.location.reload();
+                    }
+                });
+                
+                // Controlla se c'è un nuovo service worker in attesa
+                registration.addEventListener('updatefound', function() {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', function() {
+                            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                                console.log('Nuovo Service Worker attivato, ricarico la pagina...');
+                                window.location.reload();
+                            }
+                        });
+                    }
+                });
+            })
+            .catch(function(error) {
+                console.log('Registrazione Service Worker fallita:', error);
+            });
+        
+        // Controlla aggiornamenti ogni 60 secondi
+        setInterval(function() {
+            navigator.serviceWorker.getRegistration().then(function(registration) {
+                if (registration) {
+                    registration.update();
+                }
+            });
+        }, 60000);
+    });
+}
+```
+
+AGGIORNAMENTO CACHE:
+--------------------
+1. Incrementare CACHE_NAME nel service-worker.js (es. v4 → v5)
+2. Aggiungere nuovi file a PRECACHE_FILES se necessario
+3. Il nuovo service worker si installerà automaticamente
+4. Le pagine si ricaricheranno automaticamente quando rilevano l'aggiornamento
+
+================================================================================
+4. STRUTTURA HTML STANDARD
+================================================================================
+
+TEMPLATE BASE HEAD:
+-------------------
+```html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>[Titolo Pagina] · HUGÒ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="[Descrizione pagina]">
+    
+    <!-- Meta tag iOS (PWA/Home Screen) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HUGÒ">
+    <link rel="apple-touch-icon" href="logomini.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FFC928">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="logo.ico">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://martasant.github.io/hugohub/[nome-pagina].html">
+    
+    <!-- Preconnect per CDN esterni (performance) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://martasant.github.io/hugohub/[nome-pagina].html">
+    <meta property="og:title" content="[Titolo Pagina] · HUGÒ">
+    <meta property="og:description" content="[Descrizione]">
+    <meta property="og:image" content="https://martasant.github.io/hugohub/logo.png">
+    <meta property="og:locale" content="it_IT">
+    <meta property="og:site_name" content="HUGÒ · Find your happiness">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://martasant.github.io/hugohub/[nome-pagina].html">
+    <meta name="twitter:title" content="[Titolo Pagina] · HUGÒ">
+    <meta name="twitter:description" content="[Descrizione]">
+    <meta name="twitter:image" content="https://martasant.github.io/hugohub/logo.png">
+    
+    <!-- Meta tag per disabilitare la cache del browser -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <link rel="stylesheet" href="style.css">
+    <!-- Preload font critico Montserrat -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" as="style">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+```
+
+HEADER STANDARD (per pagine menu):
+-----------------------------------
+```html
+<header class="menu-header">
+    <div class="menu-header-left">
+        <div class="menu-logo">
+            <img src="logomini.png" alt="HUGÒ">
+        </div>
+        <div class="menu-title-block">
+            <span class="menu-eyebrow">HUGÒ · Find your happiness</span>
+            <h1 class="menu-title">[Titolo Pagina]</h1>
+        </div>
+    </div>
+    <a href="[pagina-precedente].html" class="menu-close">
+        <span>&larr;</span>
+        <span>[Testo Link]</span>
+    </a>
+</header>
+```
+
+FOOTER STANDARD:
+----------------
+```html
+<footer class="site-footer">
+    <div class="footer-bottom">
+        <p>&copy; <span id="year"></span> HUGÒ. Tutti i diritti riservati.</p>
+        <p class="footer-designed">
+            Designed by <a href="autore.html" class="footer-author-link">Studio IDE</a>
+        </p>
+        <p class="footer-designed" style="margin-top: 0.3rem;">
+            <a href="policy.html" class="footer-author-link">Policy</a> • P.IVA IT09578771215
+        </p>
+    </div>
+</footer>
+```
+
+SCRIPT FOOTER (aggiorna anno):
+-------------------------------
+```javascript
+// aggiorna anno nel footer
+document.getElementById('year').textContent = new Date().getFullYear();
+```
+
+================================================================================
+5. META TAG E SEO
+================================================================================
+
+REGOLE META TAG:
+----------------
+1. Ogni pagina DEVE avere:
+   - title: "[Titolo] · HUGÒ"
+   - description: Descrizione unica e specifica
+   - canonical: URL completo della pagina
+   - og:url, og:title, og:description, og:image
+   - twitter:url, twitter:title, twitter:description, twitter:image
+
+2. URL base: https://martasant.github.io/hugohub/
+3. Immagine default: https://martasant.github.io/hugohub/logo.png
+4. Locale: it_IT
+5. Site name: "HUGÒ · Find your happiness"
+
+SITEMAP.XML:
+------------
+- Aggiornare quando si aggiungono nuove pagine
+- Formato: <loc>https://martasant.github.io/hugohub/[pagina].html</loc>
+- Priorità: 1.0 per homepage, 0.8 per pagine principali
+
+ROBOTS.TXT:
+------------
+- User-agent: *
+- Allow: /
+- Sitemap: https://martasant.github.io/hugohub/sitemap.xml
+
+================================================================================
+6. PWA (PROGRESSIVE WEB APP)
+================================================================================
+
+MANIFEST.JSON:
+--------------
+```json
+{
+  "name": "HUGÒ · Find your happiness",
+  "short_name": "HUGÒ",
+  "description": "Hugò - Find your happiness. Via Nazionale delle Puglie, 2, 80038, Pomigliano d'Arco NA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#FFC928",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logomini.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
+```
+
+REQUISITI PWA:
+--------------
+1. Service Worker registrato
+2. Manifest.json presente
+3. HTTPS (automatico su GitHub Pages)
+4. Icone: logo.png (512x512) e logomini.png (192x192)
+5. Theme color: #FFC928
+6. Background color: #111111
+
+================================================================================
+7. GESTIONE IMMAGINI (CASE-SENSITIVE)
+================================================================================
+
+PROBLEMA CRITICO:
+-----------------
+GitHub Pages è case-sensitive (Linux-based), Windows NO.
+- In locale funziona: paloma.png = Paloma.png
+- Su GitHub Pages NO: paloma.png ≠ Paloma.png
+
+REGOLE:
+-------
+1. VERIFICARE sempre i nomi reali dei file immagine
+2. I riferimenti nel codice DEVONO corrispondere ESATTAMENTE ai nomi file
+3. Preferire nomi tutto minuscolo per evitare problemi
+4. Se il file è "Paloma.png", il riferimento DEVE essere "Paloma.png"
+
+ESEMPIO ERRORE:
+---------------
+File: Paloma.png (P maiuscola)
+Codice: <img src="paloma.png"> ❌ NON FUNZIONA su GitHub Pages
+Corretto: <img src="Paloma.png"> ✅
+
+CHECKLIST IMMAGINI:
+-------------------
+1. Listare tutti i file immagine nella directory
+2. Verificare ogni riferimento <img src="...">
+3. Verificare ogni riferimento in CSS background-image
+4. Verificare ogni riferimento in meta tag og:image, twitter:image
+5. Assicurarsi che case corrisponda esattamente
+
+================================================================================
+8. CSS E DESIGN SYSTEM
+================================================================================
+
+PALETTE COLORI:
+---------------
+- Giallo principale: #FFC928
+- Giallo scuro: #E2AD1F
+- Giallo chiaro: #FFE27A
+- Nero profondo: #111111
+- Nero: #000000
+- Bianco: #ffffff
+- Grigio chiaro: #e0e0e0
+
+FONT:
+-----
+- Famiglia: 'Montserrat', system-ui, sans-serif
+- Pesi: 400 (regular), 600 (semi-bold), 700 (bold)
+- Google Fonts: https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap
+
+RESET CSS:
+----------
+- Box-sizing: border-box
+- Margin/Padding: 0
+- Scrollbar nascosta
+- Touch-action: manipulation (migliora performance mobile)
+
+CLASSI PRINCIPALI:
+-----------------
+- .home-body: Body per homepage
+- .menu-body: Body per pagine menu
+- .menu-page: Container principale pagine menu
+- .menu-header: Header pagine menu
+- .menu-title: Titolo principale
+- .menu-section: Sezione menu
+- .menu-item: Item del menu
+- .card: Card navigazione homepage
+- .site-footer: Footer standard
+
+RESPONSIVE:
+-----------
+- Mobile-first approach
+- Media queries per breakpoint:
+  - @media (max-width: 768px)
+  - @media (max-width: 480px)
+  - @media (max-width: 360px)
+
+================================================================================
+9. PATTERN DI NAVIGAZIONE
+================================================================================
+
+HOMEPAGE (home.html):
+---------------------
+- Cards cliccabili con link a sezioni
+- Pattern: <a href="[pagina].html" class="card">
+- Ogni card ha: titolo, sottotitolo, freccia →
+
+MENU PAGES:
+-----------
+- Header fisso in alto con logo e titolo
+- Bottone "Home" o "Indietro" fisso in alto a destra
+- Contenuto scrollabile
+- Footer in fondo
+
+DETAIL PAGES:
+-------------
+- Header con logo
+- Bottone indietro alla pagina precedente
+- Contenuto specifico della pagina
+- Footer
+
+NAVIGAZIONE:
+------------
+- Sempre link relativi: href="[pagina].html"
+- Mai link assoluti per navigazione interna
+- Homepage sempre accessibile da home.html
+
+================================================================================
+10. GESTIONE AGGIORNAMENTI
+================================================================================
+
+PROCESSO AGGIORNAMENTO:
+-----------------------
+1. Modificare file HTML/CSS/JS
+2. Incrementare versione cache in service-worker.js (vN → vN+1)
+3. Aggiungere nuovi file a PRECACHE_FILES se necessario
+4. Commit e push su GitHub
+5. GitHub Pages deploy automatico
+6. Il service worker rileva automaticamente l'aggiornamento
+7. Le pagine si ricaricano automaticamente
+
+FORZARE AGGIORNAMENTO MANUALE:
+-------------------------------
+1. Aprire DevTools → Application → Service Workers
+2. Click "Unregister" per rimuovere service worker
+3. Ricaricare pagina
+4. Oppure: Hard refresh (Ctrl+Shift+R / Cmd+Shift+R)
+
+VERIFICA AGGIORNAMENTI:
+-----------------------
+1. Controllare console browser per log service worker
+2. Verificare che CACHE_NAME corrisponda alla versione attesa
+3. Verificare che i file siano stati scaricati dalla rete (Network tab)
+
+================================================================================
+11. DEPLOYMENT SU GITHUB PAGES
+================================================================================
+
+SETUP INIZIALE:
+---------------
+1. Creare repository GitHub
+2. Push di tutti i file
+3. Settings → Pages → Source: main branch / root
+4. Il sito sarà disponibile su: https://[username].github.io/[repo-name]/
+
+STRUTTURA PER GITHUB PAGES:
+---------------------------
+- Tutti i file nella root del repository
+- index.html come entry point
+- Percorsi relativi per tutti i link
+- Case-sensitive per nomi file
+
+URL BASE:
+---------
+- Sostituire in tutti i meta tag:
+  - canonical
+  - og:url
+  - twitter:url
+  - sitemap.xml
+  - robots.txt
+
+COMMIT E DEPLOY:
+----------------
+1. git add .
+2. git commit -m "messaggio"
+3. git push origin main
+4. GitHub Pages deploy automatico (pochi minuti)
+5. Verificare su https://[username].github.io/[repo-name]/
+
+================================================================================
+12. TROUBLESHOOTING
+================================================================================
+
+PROBLEMA: Immagini non si caricano su GitHub Pages
+---------------------------------------------------
+CAUSA: Case-sensitive mismatch
+SOLUZIONE: Verificare che nomi file corrispondano esattamente ai riferimenti
+
+PROBLEMA: Sito non si aggiorna dopo deploy
+-------------------------------------------
+CAUSA: Service worker cache
+SOLUZIONE: 
+1. Incrementare versione cache
+2. Hard refresh (Ctrl+Shift+R)
+3. Oppure: Unregister service worker da DevTools
+
+PROBLEMA: Service worker non si registra
+----------------------------------------
+CAUSA: File non trovato o errore JavaScript
+SOLUZIONE:
+1. Verificare che service-worker.js sia nella root
+2. Verificare console per errori
+3. Verificare che il percorso sia corretto: '/service-worker.js'
+
+PROBLEMA: Footer mostra "me stesso" invece di "Studio IDE"
+----------------------------------------------------------
+CAUSA: Testo non aggiornato
+SOLUZIONE: Cercare e sostituire "me stesso" con "Studio IDE" in tutti i file
+
+PROBLEMA: Branding vecchio ancora presente
+-------------------------------------------
+CAUSA: Sostituzioni incomplete
+SOLUZIONE: 
+1. Cercare "Flègo", "FLÈGO", "fleco" in tutti i file
+2. Sostituire con "HUGÒ"
+3. Cercare "Sorsi & Morsi", sostituire con "Find your happiness"
+
+PROBLEMA: Pagina troppo larga su mobile (scroll orizzontale)
+-------------------------------------------------------------
+CAUSA: Elementi con larghezza fissa o overflow
+SOLUZIONE:
+1. Aggiungere overflow-x: hidden al container principale
+2. Verificare che elementi non abbiano width fissa > viewport
+3. Usare max-width: 100% per immagini
+4. Aggiungere word-wrap: break-word per testi lunghi
+
+PROBLEMA: Keyboard navigation non funziona
+-------------------------------------------
+CAUSA: Event listener su document invece di window
+SOLUZIONE: Usare window.addEventListener('keydown') invece di document
+
+================================================================================
+13. BEST PRACTICES
+================================================================================
+
+CODICE:
+-------
+1. Sempre validare HTML (W3C Validator)
+2. Usare semantic HTML (header, main, footer, nav, section)
+3. Accessibilità: alt text per immagini, aria-label dove necessario
+4. Performance: preload font critici, lazy load immagini se necessario
+5. SEO: meta tag completi, sitemap aggiornata
+
+SERVICE WORKER:
+---------------
+1. Incrementare versione ad ogni aggiornamento significativo
+2. Testare sempre in locale prima di deploy
+3. Monitorare console per errori
+4. Usare Network First per HTML, Cache First per asset statici
+
+IMMAGINI:
+---------
+1. Ottimizzare dimensioni (non > 1MB)
+2. Usare formati moderni (WebP se possibile)
+3. Nomi file tutto minuscolo quando possibile
+4. Verificare case-sensitive prima di deploy
+
+CSS:
+----
+1. Mobile-first approach
+2. Usare variabili CSS per colori se possibile
+3. Evitare !important quando possibile
+4. Organizzare CSS per sezioni logiche
+
+GIT:
+----
+1. Commit frequenti e descrittivi
+2. Branch separati per feature importanti
+3. Testare sempre prima di merge su main
+4. Documentare breaking changes
+
+DEPLOYMENT:
+-----------
+1. Testare sempre in locale prima
+2. Verificare tutti i link dopo deploy
+3. Controllare console per errori
+4. Testare su dispositivi reali (mobile/desktop)
+5. Verificare PWA installabile
+
+================================================================================
+                    FINE DOCUMENTAZIONE
+================================================================================
+
+NOTE FINALI:
+------------
+- Questo documento deve essere aggiornato quando si aggiungono nuove funzionalità
+- Mantenere sempre coerenza con il branding HUGÒ
+- Testare sempre su GitHub Pages dopo modifiche
+- Monitorare performance e UX continuamente
+
+Ultimo aggiornamento: 2025-01-XX
+Versione Service Worker: v4
+
