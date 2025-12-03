@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>404 - Pagina non trovata · Dionosio's</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Pagina non trovata - Dionosio's - Napulitan Barbery">
+    
+    <!-- Meta tag iOS (PWA/Home Screen) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dionosio's">
+    <link rel="apple-touch-icon" href="logomini.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#7B2E2E">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="logo.ico">
+    
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="menu-body">
+    <div class="menu-page">
+        <a href="home.html" class="menu-close">
+            <span>&larr;</span>
+            <span>Home</span>
+        </a>
+        
+        <main class="menu-content">
+            <div style="text-align: center; padding: 60px 20px;">
+                <h2 style="font-size: 4rem; color: #7B2E2E; margin-bottom: 20px;">404</h2>
+                <p style="font-size: 1.2rem; color: #221A16; opacity: 0.8; margin-bottom: 40px;">
+                    Pagina non trovata
+                </p>
+                <a href="home.html" style="display: inline-block; padding: 16px 32px; background: #7B2E2E; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                    Torna alla Home
+                </a>
+            </div>
+        </main>
+        
+        <footer class="menu-footer">
+            <p>&copy; <span id="year"></span> Dionosio's. Tutti i diritti riservati.</p>
+        </footer>
+    </div>
+    
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
+
